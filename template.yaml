@@ -1,0 +1,101 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  serverless-url-shortener
+  SAM Template for serverless-url-shortener
+
+Parameters:
+  HostName:
+    Type: String
+    Default: example.com
+  LogRetentionInDays:
+    Type: Number
+    Default: 7
+  TTL:
+    Type: Number
+    Default: 155520000 # ~ 5 years
+
+Globals:
+  Function:
+    Timeout: 10
+    Environment:
+      Variables:
+        HostName: !Sub ${HostName}
+        MappingTable: !Ref URLMappingsDynamoDBTable
+        TTL: !Sub ${TTL}
+
+Resources:
+  CreateURLFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: bin/
+      Handler: create-url
+      Runtime: go1.x
+      Events:
+        CatchAll:
+          Type: Api
+          Properties:
+            Path: /url
+            Method: POST
+      # https://github.com/awslabs/serverless-application-model/blob/master/examples/2016-10-31/policy_templates/all_policy_templates.yaml
+      Policies:
+        - CloudFormationDescribeStacksPolicy: {}
+        - DynamoDBCrudPolicy:
+            TableName: !Ref URLMappingsDynamoDBTable
+  CreateURLFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+        LogGroupName:
+          !Join
+            - ''
+            - - '/aws/lambda/'
+              - !Ref CreateURLFunction
+        RetentionInDays: !Sub ${LogRetentionInDays}
+
+  RedirectURLFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: bin/
+      Handler: redirect-url
+      Runtime: go1.x
+      Events:
+        CatchAll:
+          Type: Api
+          Properties:
+            Path: /url
+            Method: GET
+      Policies:
+        - CloudFormationDescribeStacksPolicy: {}
+        - DynamoDBReadPolicy:
+            TableName: !Ref URLMappingsDynamoDBTable
+  RedirectURLFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+        LogGroupName:
+          !Join
+            - ''
+            - - '/aws/lambda/'
+              - !Ref RedirectURLFunction
+        RetentionInDays: !Sub ${LogRetentionInDays}
+
+  URLMappingsDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      AttributeDefinitions:
+        - AttributeName: url_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: url_id
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: expired_at
+        Enabled: true
+
+
+Outputs:
+  CreateURLFunctionAPI:
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/url"

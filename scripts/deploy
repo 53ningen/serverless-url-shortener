@@ -1,0 +1,16 @@
+#!/bin/bash
+
+make clean build
+
+sam package --output-template-file packaged.yaml \
+  --s3-bucket $S3Bucket \
+  --s3-prefix $S3KeyPrefix \
+  --profile $AWSProfile
+
+sam deploy --template-file packaged.yaml \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --stack-name $StackName \
+  --profile $AWSProfile
+
+aws cloudformation describe-stacks --stack-name $StackName \
+    --output text

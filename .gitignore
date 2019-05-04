@@ -1,0 +1,8 @@
+
+.env
+!.env.template
+
+bin
+vendor
+.aws-sam
+packaged.yaml
