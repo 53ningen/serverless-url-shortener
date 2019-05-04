@@ -29,7 +29,7 @@ var (
 )
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	id, ok := request.QueryStringParameters["id"]
+	id, ok := request.PathParameters["url_id"]
 	if !ok {
 		return events.APIGatewayProxyResponse{
 			Body:       getErrorMessage("invalid request parameter"),
@@ -51,7 +51,7 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		}, nil
 	}
 	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusPermanentRedirect,
+		StatusCode: http.StatusTemporaryRedirect,
 		Headers: map[string]string{
 			"location": m.URL,
 		},

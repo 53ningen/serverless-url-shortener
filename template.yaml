@@ -7,7 +7,6 @@ Description: >
 Parameters:
   HostName:
     Type: String
-    Default: example.com
   LogRetentionInDays:
     Type: Number
     Default: 7
@@ -62,7 +61,7 @@ Resources:
         CatchAll:
           Type: Api
           Properties:
-            Path: /url
+            Path: /{url_id}
             Method: GET
       Policies:
         - CloudFormationDescribeStacksPolicy: {}

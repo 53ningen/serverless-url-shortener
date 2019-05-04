@@ -1,5 +1,7 @@
 #!/bin/bash
 
+. .env
+
 make clean build
 
 sam package --output-template-file packaged.yaml \
@@ -10,7 +12,12 @@ sam package --output-template-file packaged.yaml \
 sam deploy --template-file packaged.yaml \
   --capabilities CAPABILITY_NAMED_IAM \
   --stack-name $StackName \
-  --profile $AWSProfile
+  --profile $AWSProfile \
+  --parameter-overrides \
+    "HostName=$HostName" \
+    "TTL=$TTL"
+
 
 aws cloudformation describe-stacks --stack-name $StackName \
-    --output text
+    --output text \
+    --profile $AWSProfile
