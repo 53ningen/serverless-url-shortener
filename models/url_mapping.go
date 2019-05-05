@@ -15,6 +15,11 @@ var (
 	ErrURLID = errors.New("cannot create URLID")
 )
 
+// CreateURLRequestBody CreateURL request body
+type CreateURLRequestBody struct {
+	URL string `dynamo:"url"`
+}
+
 // URLMapping represent id:url mapping table record
 type URLMapping struct {
 	URLId     string `dynamo:"url_id"`
@@ -80,7 +85,7 @@ func (m *URLMapper) CreateMapping(u *url.URL, now time.Time, ttl *int) (result *
 }
 
 func (m *URLMapper) getAvailableURLID(originalURL *url.URL) (urlID string, e error) {
-	md5 := getMD5Hash(originalURL.String())
+	md5 := getSHA256(originalURL.String())
 	for i := 4; i < 10; i++ {
 		next := md5[:i]
 		if mapping, e := m.MappingStore.GetURLMapping(next); e != nil {
@@ -93,7 +98,7 @@ func (m *URLMapper) getAvailableURLID(originalURL *url.URL) (urlID string, e err
 	return "", ErrURLID
 }
 
-func getMD5Hash(s string) string {
+func getSHA256(s string) string {
 	h := sha256.New()
 	h.Write([]byte(s))
 	return hex.EncodeToString(h.Sum(nil))
