@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"log"
@@ -72,7 +73,10 @@ func handler(event events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 		}, nil
 	}
 
-	json, err := json.Marshal(result)
+	buffer := &bytes.Buffer{}
+	encoder := json.NewEncoder(buffer)
+	encoder.SetEscapeHTML(false)
+	err = encoder.Encode(result)
 	if err != nil {
 		log.Println(ErrInternal)
 		return events.APIGatewayProxyResponse{
@@ -81,14 +85,19 @@ func handler(event events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 		}, nil
 	}
 	return events.APIGatewayProxyResponse{
-		Body:       string(json),
+		Body:       string(buffer.Bytes()),
 		StatusCode: http.StatusOK,
 	}, nil
 }
 
-func extractURL(event events.APIGatewayProxyRequest) (givenURL *url.URL, e error) {
-	u, err := url.Parse(event.QueryStringParameters["url"])
-	if err != nil || !isValidURLString(u) || len(u.String()) > 1024 {
+func extractURL(event events.APIGatewayProxyRequest) (givenURL *url.URL, err error) {
+	var body models.CreateURLRequestBody
+	e := json.Unmarshal([]byte(event.Body), &body)
+	if e != nil {
+		return nil, ErrInvalidURL
+	}
+	u, e := url.Parse(body.URL)
+	if err != nil || !isValidURLString(u) || len(body.URL) > 1024 {
 		return nil, ErrInvalidURL
 	}
 	return u, nil
